@@ -11,10 +11,10 @@ export const ChartComponent = (props) => {
     data,
     colors: {
       backgroundColor = "white",
-      lineColor = "#2962FF",
+      lineColor = "#rgb(0, 0, 0)",
       textColor = "black",
-      areaTopColor = "#2962FF",
-      areaBottomColor = "rgba(41, 98, 255, 0.28)",
+      areaTopColor = "rgba(41, 98, 255, 0)",
+      areaBottomColor = "rgba(41, 98, 255, 0)",
     } = {},
     signalDate,
   } = props;
@@ -32,7 +32,7 @@ export const ChartComponent = (props) => {
         textColor,
       },
       width: chartContainerRef.current.clientWidth,
-      height: 300,
+      height: 400,
       localization: {
         dateFormat: "yyyy-MM-dd",
       },
@@ -45,8 +45,8 @@ export const ChartComponent = (props) => {
     });
     newSeries.setData(data);
 
-    if (data.length > 100) {
-      const last200 = data.slice(-100);
+    if (data.length > 50) {
+      const last200 = data.slice(-50);
       chart.timeScale().setVisibleRange({
         from: last200[0].time,
         to: last200[last200.length - 1].time,
@@ -59,16 +59,40 @@ export const ChartComponent = (props) => {
       {
         time: signalDate,
         position: "inBar",
-        color: "#f68410",
+        color: "rgb(0, 255, 0)",
         shape: "circle",
-        text: "signal",
+        size: 1,
       },
     ];
     createSeriesMarkers(newSeries, markers);
 
     window.addEventListener("resize", handleResize);
+
+    // Use IntersectionObserver to trigger a resize when the container becomes visible.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            handleResize();
+            if (data.length > 50) {
+              const last200 = data.slice(-50);
+              chart.timeScale().setVisibleRange({
+                from: last200[0].time,
+                to: last200[last200.length - 1].time,
+              });
+            } else {
+              chart.timeScale().fitContent();
+            }
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(chartContainerRef.current);
+
     return () => {
       window.removeEventListener("resize", handleResize);
+      observer.disconnect();
       chart.remove();
     };
   }, [
@@ -81,7 +105,7 @@ export const ChartComponent = (props) => {
     signalDate,
   ]);
 
-  return <div ref={chartContainerRef} />;
+  return <div style={{ width: "90%" }} ref={chartContainerRef} />;
 };
 
 // Transform the candles data to the same format as initialData: { time: "YYYY-MM-DD", value: <close> }
@@ -101,7 +125,7 @@ const transformCandles = (candles) => {
 function App() {
   const [availableFiles, setAvailableFiles] = useState({});
   const [screenResults, setScreenResults] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Load available JSON file names from the last 30 days.
   useEffect(() => {
@@ -173,7 +197,7 @@ function App() {
         padding: "1rem",
       }}
     >
-      <h1>Trading View Charts</h1>
+      <h1>Screen Results Charts</h1>
 
       {loading && <p>Loading json data...</p>}
 
@@ -183,14 +207,28 @@ function App() {
           .map(([date, screenResult]) => {
             return (
               <div key={date}>
-                <h2>signal on {date}</h2>
+                <h2>signals on {date}</h2>
                 {Object.entries(screenResult).map(([ticker, data]) => {
                   const filteredData = transformCandles(
                     data.price_data.candles
                   );
                   return data ? (
-                    <details key={ticker}>
-                      <summary>{ticker} {data.price_data.score}</summary>
+                    <details
+                      key={ticker}
+                      style={{ cursor: "pointer", marginBottom: "10px" }}
+                    >
+                      <summary>
+                        <span
+                          style={{
+                            fontWeight: "bold",
+                            marginRight: "20px",
+                          }}
+                        >
+                          {ticker}
+                        </span>
+                        Mark signals: {data.score.split(" ")[0]} {" "}
+                        Bonus signals: {data.score.split(" ")[1]}
+                      </summary>
                       <ChartComponent data={filteredData} signalDate={date} />
                     </details>
                   ) : (
