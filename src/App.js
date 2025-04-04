@@ -16,6 +16,7 @@ export const ChartComponent = (props) => {
       areaTopColor = "#2962FF",
       areaBottomColor = "rgba(41, 98, 255, 0.28)",
     } = {},
+    signalDate,
   } = props;
 
   const chartContainerRef = useRef();
@@ -32,6 +33,9 @@ export const ChartComponent = (props) => {
       },
       width: chartContainerRef.current.clientWidth,
       height: 300,
+      localization: {
+        dateFormat: "yyyy-MM-dd",
+      },
     });
 
     const newSeries = chart.addSeries(AreaSeries, {
@@ -41,20 +45,26 @@ export const ChartComponent = (props) => {
     });
     newSeries.setData(data);
 
-    // Add a marker on the 10th last data point if available
-    if (data && data.length >= 10) {
-      const markerData = data[data.length - 10];
-      const markers = [
-        {
-          time: markerData.time,
-          position: "inBar",
-          color: "#f68410",
-          shape: "circle",
-          text: "signal",
-        },
-      ];
-      createSeriesMarkers(newSeries, markers);
+    if (data.length > 100) {
+      const last200 = data.slice(-100);
+      chart.timeScale().setVisibleRange({
+        from: last200[0].time,
+        to: last200[last200.length - 1].time,
+      });
+    } else {
+      chart.timeScale().fitContent();
     }
+
+    const markers = [
+      {
+        time: signalDate,
+        position: "inBar",
+        color: "#f68410",
+        shape: "circle",
+        text: "signal",
+      },
+    ];
+    createSeriesMarkers(newSeries, markers);
 
     window.addEventListener("resize", handleResize);
     return () => {
@@ -68,6 +78,7 @@ export const ChartComponent = (props) => {
     textColor,
     areaTopColor,
     areaBottomColor,
+    signalDate,
   ]);
 
   return <div ref={chartContainerRef} />;
@@ -88,15 +99,14 @@ const transformCandles = (candles) => {
 };
 
 function App() {
-  const [availableFiles, setAvailableFiles] = useState([]);
-  const [selectedFile, setSelectedFile] = useState("");
-  const [selectedData, setSelectedData] = useState({});
+  const [availableFiles, setAvailableFiles] = useState({});
+  const [screenResults, setScreenResults] = useState({});
   const [loading, setLoading] = useState(false);
 
   // Load available JSON file names from the last 30 days.
   useEffect(() => {
     const loadJsonFiles = async () => {
-      const filesAvailable = [];
+      const newAvailableFile = {};
       const today = new Date();
       for (let i = 0; i < 30; i++) {
         const date = new Date(today);
@@ -114,15 +124,12 @@ function App() {
           ) {
             throw new Error(`File ${filename} not found`);
           }
-          filesAvailable.push(filename);
+          newAvailableFile[date.toISOString().split("T")[0]] = filename;
         } catch (error) {
           // Ignore missing files.
         }
       }
-      setAvailableFiles(filesAvailable);
-      if (filesAvailable.length > 0) {
-        setSelectedFile(filesAvailable[0]);
-      }
+      setAvailableFiles(newAvailableFile);
     };
 
     loadJsonFiles();
@@ -130,63 +137,69 @@ function App() {
 
   // Load JSON content for the selected file.
   useEffect(() => {
-    if (!selectedFile) return;
+    if (availableFiles.length === 0) return;
+
     const loadJsonData = async () => {
       setLoading(true);
-      try {
-        const response = await fetch(`/data/${selectedFile}`);
-        const json = await response.json();
-        // Assumes the JSON structure is an array of objects: { ticker, data }
-        setSelectedData(json);
-        console.log("Loaded json data", json);
-      } catch (error) {
-        console.error("Failed to load json", error);
-        setSelectedData({});
-      }
+      const newScreenResults = {};
+      await Promise.all(
+        Object.entries(availableFiles).map(async ([date, file]) => {
+          try {
+            const response = await fetch(`/data/${file}`);
+            const json = await response.json();
+            newScreenResults[date] = json;
+          } catch (error) {
+            console.error(`Failed to load json /data/${file}`, error);
+          }
+        })
+      );
       setLoading(false);
+      setScreenResults(newScreenResults);
     };
 
     loadJsonData();
-  }, [selectedFile]);
+  }, [availableFiles]);
 
   return (
-    <div className="p-4" style={{ maxWidth: "80vw" }}>
-      <h1 className="text-2xl font-bold mb-4">Trading View Charts</h1>
-      <div className="mb-4">
-        <label htmlFor="json-select" className="mr-2">
-          Select json:
-        </label>
-        <select
-          id="json-select"
-          value={selectedFile}
-          onChange={(e) => setSelectedFile(e.target.value)}
-          className="border p-1"
-        >
-          {availableFiles.map((file) => (
-            <option key={file} value={file}>
-              {file}
-            </option>
-          ))}
-        </select>
-      </div>
-      {loading && <p>Loading json data...</p>}
-      {!loading && selectedData.length === 0 && <p>No data available.</p>}
-      
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        minHeight: "100vh",
+        width: "95%",
+        gap: "1rem",
+        padding: "1rem",
+      }}
+    >
+      <h1>Trading View Charts</h1>
 
-      {Object.entries(selectedData).map(([ticker, data]) => {
-        // Transform the candles data only once
-        const filteredData = transformCandles(data.price_data.candles);
-        return data ? (
-          <div key={ticker} className="mb-8">
-            <h2 key={ticker} className="text-xl font-bold mb-4">
-              {ticker}
-            </h2>
-            <ChartComponent key={ticker} data={filteredData} />
-          </div>
-        ) : (
-          <p key={ticker}>No chart data found for ticker: {ticker}</p>
-        );
-      })}
+      {loading && <p>Loading json data...</p>}
+
+      {!loading &&
+        Object.entries(screenResults)
+          .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+          .map(([date, screenResult]) => {
+            return (
+              <div key={date}>
+                <h2>signal on {date}</h2>
+                {Object.entries(screenResult).map(([ticker, data]) => {
+                  const filteredData = transformCandles(
+                    data.price_data.candles
+                  );
+                  return data ? (
+                    <details key={ticker}>
+                      <summary>{ticker} {data.price_data.score}</summary>
+                      <ChartComponent data={filteredData} signalDate={date} />
+                    </details>
+                  ) : (
+                    <p key={ticker}>No chart data found for ticker: {ticker}</p>
+                  );
+                })}
+              </div>
+            );
+          })}
     </div>
   );
 }
