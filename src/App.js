@@ -141,6 +141,20 @@ export const ChartComponent = (props) => {
   return <div ref={chartContainerRef} />;
 };
 
+// Transform the candles data to the same format as initialData: { time: "YYYY-MM-DD", value: <close> }
+const transformCandles = (candles) => {
+  return candles.map((candle) => {
+    const date = new Date(candle.datetime * 1000); // convert seconds to milliseconds
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return {
+      time: `${yyyy}-${mm}-${dd}`,
+      value: candle.close,
+    };
+  });
+};
+
 const initialData = [
   { time: "2018-12-22", value: 32.51 },
   { time: "2018-12-23", value: 31.11 },
@@ -239,9 +253,11 @@ function App() {
       {loading && <p>Loading json data...</p>}
       {!loading && selectedData.length === 0 && <p>No data available.</p>}
       {Object.entries(selectedData).map(([ticker, data]) => {
+        // Transform the candles data only once
+        const filteredData = transformCandles(data.price_data.candles);
+
         return data ? (
-          // <ChartComponent key={ticker} ticker={ticker} data={data} />
-          <ChartComponent data={initialData}></ChartComponent>
+          <ChartComponent key={ticker} data={filteredData} />
         ) : (
           <p key={ticker}>No chart data found for ticker: {ticker}</p>
         );
