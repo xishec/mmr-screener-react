@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "30 */6 * * *" # Every day at midnight UTC
-    - cron: "0 3 * * *" # Every day at midnight UTC
+    - cron: "0 3 * * *"    # Every day at midnight UTC
 
 jobs:
   update_data:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout current repository
-        uses: actions/checkout@v2
+      - name: checkout repo content
+        uses: actions/checkout@v3 # checkout the repository content to github runner.
 
       - name: Checkout external repository containing daily files
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: xishec/mmr-screener
           path: external
@@ -26,14 +26,17 @@ jobs:
           mkdir -p public/data
           cp -R external/screen_results/daily/* public/data/
 
-      - name: Commit and push changes if any
+      - name: Commit and push if changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          if [ -n "$(git status --porcelain public/data)" ]; then
-            git add public/data
-            git commit -m "Update public data files"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          git add --all
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update stocks data [automated]"
+          git pull --rebase 
+          sleep 5
+          for i in {1..50}; do
+            git push && break || echo "Push failed, retrying ($i/10)..."
+            sleep 6
+            git pull --rebase 
+          done
+          git push
