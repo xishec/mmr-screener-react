@@ -20,8 +20,9 @@ jobs:
           path: external
           fetch-depth: 1
 
-      - name: Copy daily files to public/data
+      - name: Remove old files and copy new daily files to public/data
         run: |
+          rm -rf public/data/*
           mkdir -p public/data
           cp -R external/screen_results/daily/* public/data/
 

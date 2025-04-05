@@ -12,14 +12,33 @@ on:
     - cron: "30 3 * * *" # Every day at midnight UTC
 
 jobs:
-  build_and_preview:
+  update_data:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - run: npm install && echo '-----Install Done 👌-----' && npm run build && echo '-----Build Done 👌-----'
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Checkout current repository
+        uses: actions/checkout@v2
+
+      - name: Checkout external repository containing daily files
+        uses: actions/checkout@v2
         with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_MMR_SCREENER }}"
-          channelId: live
-          projectId: mmr-screener
+          repository: xishec/mmr-screener
+          path: external
+          fetch-depth: 1
+
+      - name: Remove old files and copy new daily files to public/data
+        run: |
+          rm -rf public/data/*
+          mkdir -p public/data
+          cp -R external/screen_results/daily/* public/data/
+
+      - name: Commit and push changes if any
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if [ -n "$(git status --porcelain public/data)" ]; then
+            git add public/data
+            git commit -m "Update public data files"
+            git push
+          else
+            echo "No changes to commit."
+          fi
