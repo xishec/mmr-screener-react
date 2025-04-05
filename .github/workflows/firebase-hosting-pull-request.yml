@@ -10,6 +10,10 @@ on:
   schedule:
     - cron: "45 */6 * * *" # Every day at midnight UTC
     - cron: "30 3 * * *" # Every day at midnight UTC
+  workflow_run:
+    workflows: ["Update Data Files"]
+    types:
+      - completed
 
 jobs:
   update_data:
