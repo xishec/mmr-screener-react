@@ -26,17 +26,14 @@ jobs:
           mkdir -p public/data
           cp -R external/screen_results/daily/* public/data/
 
-      - name: Commit and push if changes
+      - name: Commit and push changes if any
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add --all
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update stocks data [automated]"
-          git pull --rebase 
-          sleep 5
-          for i in {1..50}; do
-            git push && break || echo "Push failed, retrying ($i/10)..."
-            sleep 6
-            git pull --rebase 
-          done
-          git push
+          if [ -n "$(git status --porcelain public/data)" ]; then
+            git add public/data
+            git commit -m "Update public data files"
+            git push
+          else
+            echo "No changes to commit."
+          fi
