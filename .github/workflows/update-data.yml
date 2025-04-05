@@ -1,0 +1,38 @@
+name: Update Data Files
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 */6 * * *" # Every day at midnight UTC
+    - cron: "0 3 * * *" # Every day at midnight UTC
+
+jobs:
+  update_data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v2
+
+      - name: Checkout external repository containing daily files
+        uses: actions/checkout@v2
+        with:
+          repository: xishec/mmr-screener
+          path: external
+          fetch-depth: 1
+
+      - name: Copy daily files to public/data
+        run: |
+          mkdir -p public/data
+          cp -R external/screen_results/daily/* public/data/
+
+      - name: Commit and push changes if any
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          if [ -n "$(git status --porcelain public/data)" ]; then
+            git add public/data
+            git commit -m "Update public data files"
+            git push
+          else
+            echo "No changes to commit."
+          fi
