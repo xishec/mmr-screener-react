@@ -16,33 +16,14 @@ on:
       - completed
 
 jobs:
-  update_data:
+  build_and_preview:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout current repository
-        uses: actions/checkout@v2
-
-      - name: Checkout external repository containing daily files
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - run: npm ci && npm run build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repository: xishec/mmr-screener
-          path: external
-          fetch-depth: 1
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_MMR_SCREENER }}"
 
-      - name: Remove old files and copy new daily files to public/data
-        run: |
-          rm -rf public/data/*
-          mkdir -p public/data
-          cp -R external/screen_results/daily/* public/data/
-
-      - name: Commit and push changes if any
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          if [ -n "$(git status --porcelain public/data)" ]; then
-            git add public/data
-            git commit -m "Update public data files"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          projectId: mmr-screener
