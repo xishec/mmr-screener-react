@@ -128,34 +128,40 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // Load available JSON file names from the last 30 days.
-  useEffect(() => {
-    const loadJsonFiles = async () => {
-      const newAvailableFile = {};
-      const today = new Date();
-      for (let i = 0; i < 30; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        const yyyy = date.getFullYear();
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const dd = String(date.getDate()).padStart(2, "0");
-        const filename = `screen_results_${yyyy}-${mm}-${dd}.json`;
-        try {
-          const response = await fetch(`/data/${filename}`);
-          const contentType = response.headers.get("Content-Type");
-          if (
-            !response.ok ||
-            (contentType && contentType.includes("text/html"))
-          ) {
-            throw new Error(`File ${filename} not found`);
-          }
-          newAvailableFile[date.toISOString().split("T")[0]] = filename;
-        } catch (error) {
-          // Ignore missing files.
+  const loadJsonFiles = async () => {
+    const newAvailableFile = {};
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      const filename = `screen_results_${yyyy}-${mm}-${dd}.json`;
+      try {
+        const response = await fetch(`/data/${filename}`);
+        const contentType = response.headers.get("Content-Type");
+        if (
+          !response.ok ||
+          (contentType && contentType.includes("text/html"))
+        ) {
+          throw new Error(`File ${filename} not found`);
         }
+        newAvailableFile[date.toISOString().split("T")[0]] = filename;
+      } catch (error) {
+        // Ignore missing files.
       }
-      setAvailableFiles(newAvailableFile);
-    };
+    }
+    setAvailableFiles(newAvailableFile);
+  };
 
+  const handleReload = () => {
+    setLoading(true);
+    setScreenResults({});
+    loadJsonFiles();
+  };
+
+  useEffect(() => {
     loadJsonFiles();
   }, []);
 
@@ -164,7 +170,6 @@ function App() {
     if (availableFiles.length === 0) return;
 
     const loadJsonData = async () => {
-      setLoading(true);
       const newScreenResults = {};
       await Promise.all(
         Object.entries(availableFiles).map(async ([date, file]) => {
@@ -177,7 +182,8 @@ function App() {
           }
         })
       );
-      setLoading(false);
+      console.log("Loaded screen results:", newScreenResults);
+      if (Object.keys(newScreenResults).length > 0) setLoading(false);
       setScreenResults(newScreenResults);
     };
 
@@ -197,7 +203,22 @@ function App() {
         padding: "1rem",
       }}
     >
-      <h1>Screen Results Charts</h1>
+      <div style={{}}>
+        <h1>Screen Results Charts</h1>
+        <button
+          onClick={handleReload}
+          style={{
+            padding: "8px 16px",
+            color: "black",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "14px",
+          }}
+        >
+          Reload
+        </button>
+      </div>
 
       {loading && <p>Loading json data...</p>}
 
@@ -226,8 +247,8 @@ function App() {
                         >
                           {ticker}
                         </span>
-                        Mark signals: {data.score.split(" ")[0]} {" "}
-                        Bonus signals: {data.score.split(" ")[1]}
+                        Mark signals: {data.score.split(" ")[0]} Bonus signals:{" "}
+                        {data.score.split(" ")[1]}
                       </summary>
                       <ChartComponent data={filteredData} signalDate={date} />
                     </details>
