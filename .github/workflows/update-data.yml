@@ -33,7 +33,7 @@ jobs:
           if [ -n "$(git status --porcelain public/data)" ]; then
             git add public/data
             git commit -m "Update public data files"
-            git push
+            git push --force-with-lease
           else
             echo "No changes to commit."
           fi
