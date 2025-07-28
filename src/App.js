@@ -1,125 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  createChart,
-  AreaSeries,
-  ColorType,
-  createSeriesMarkers,
-} from "lightweight-charts";
+import React, { useEffect, useState } from "react";
 
-export const ChartComponent = (props) => {
-  const {
-    data,
-    colors: {
-      backgroundColor = "white",
-      lineColor = "#rgb(0, 0, 0)",
-      textColor = "black",
-      areaTopColor = "rgba(41, 98, 255, 0)",
-      areaBottomColor = "rgba(41, 98, 255, 0)",
-    } = {},
-    signalDate,
-  } = props;
-
-  const chartContainerRef = useRef();
-
-  useEffect(() => {
-    const handleResize = () => {
-      chart.applyOptions({ width: chartContainerRef.current.clientWidth });
-    };
-
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: backgroundColor },
-        textColor,
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: 400,
-      localization: {
-        dateFormat: "yyyy-MM-dd",
-      },
-    });
-
-    const newSeries = chart.addSeries(AreaSeries, {
-      lineColor,
-      topColor: areaTopColor,
-      bottomColor: areaBottomColor,
-    });
-    newSeries.setData(data);
-
-    if (data.length > 50) {
-      const last200 = data.slice(-50);
-      chart.timeScale().setVisibleRange({
-        from: last200[0].time,
-        to: last200[last200.length - 1].time,
-      });
-    } else {
-      chart.timeScale().fitContent();
-    }
-
-    const markers = [
-      {
-        time: signalDate,
-        position: "inBar",
-        color: "rgb(0, 255, 0)",
-        shape: "circle",
-        size: 1,
-      },
-    ];
-    createSeriesMarkers(newSeries, markers);
-
-    window.addEventListener("resize", handleResize);
-
-    // Use IntersectionObserver to trigger a resize when the container becomes visible.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            handleResize();
-            if (data.length > 50) {
-              const last200 = data.slice(-50);
-              chart.timeScale().setVisibleRange({
-                from: last200[0].time,
-                to: last200[last200.length - 1].time,
-              });
-            } else {
-              chart.timeScale().fitContent();
-            }
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(chartContainerRef.current);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      observer.disconnect();
-      chart.remove();
-    };
-  }, [
-    data,
-    backgroundColor,
-    lineColor,
-    textColor,
-    areaTopColor,
-    areaBottomColor,
-    signalDate,
-  ]);
-
-  return <div style={{ width: "90%" }} ref={chartContainerRef} />;
-};
-
-// Transform the candles data to the same format as initialData: { time: "YYYY-MM-DD", value: <close> }
-const transformCandles = (candles) => {
-  return candles.map((candle) => {
-    const date = new Date(candle.datetime * 1000); // convert seconds to milliseconds
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    return {
-      time: `${yyyy}-${mm}-${dd}`,
-      value: candle.close,
-    };
-  });
+const ExchangeMap = {
+  NYQ: "NYSE",
+  NMS: "NASDAQ",
 };
 
 function App() {
@@ -131,7 +14,7 @@ function App() {
   const loadJsonFiles = async () => {
     const newAvailableFile = {};
     const today = new Date();
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 100; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const yyyy = date.getFullYear();
@@ -230,28 +113,73 @@ function App() {
               <div key={date}>
                 <h2>signals on {date}</h2>
                 {Object.entries(screenResult).map(([ticker, data]) => {
-                  const filteredData = transformCandles(
-                    data.price_data.candles
-                  );
                   return data ? (
-                    <details
+                    <div
+                      style={{
+                        marginBottom: "40px",
+                        display: "grid",
+                        gridTemplateColumns: "auto",
+                        gap: "10px",
+                      }}
                       key={ticker}
-                      style={{ cursor: "pointer", marginBottom: "10px" }}
                     >
-                      <summary>
-                        <span
+                      <div>
+                        <a
+                          href={`https://www.tradingview.com/symbols/${
+                            ExchangeMap[data.exchange]
+                          }:${ticker}/?timeframe=6M`}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           style={{
+                            color: data.gain >= 0 ? "#1976d2" : "#d32f2f",
+                            textDecoration: "none",
                             fontWeight: "bold",
-                            marginRight: "20px",
+                            padding: "4px 8px",
+                            border: `1px solid ${
+                              data.gain >= 0 ? "#1976d2" : "#d32f2f"
+                            }`,
+                            borderRadius: "4px",
+                            display: "inline-block",
+                            marginTop: "8px",
                           }}
                         >
-                          {ticker}
-                        </span>
-                        Mark signals: {data.score.split(" ")[0]} Bonus signals:{" "}
-                        {data.score.split(" ")[1]}
-                      </summary>
-                      <ChartComponent data={filteredData} signalDate={date} />
-                    </details>
+                          {`${ticker} ${data.gain >= 0 ? "+" : ""}
+                          ${(data.gain * 100).toFixed(2)}% in 
+                          ${Math.floor(
+                            (new Date() - new Date(date)) /
+                              (1000 * 60 * 60 * 24)
+                          )}
+                          days`}
+                        </a>
+                      </div>
+
+                      <div>
+                        <a
+                          href={`https://www.tradingview.com/symbols/${
+                            ExchangeMap[data.exchange]
+                          }:${ticker}/financials-overview/`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            color: `#444`,
+                            border: `1px solid #444`,
+                            textDecoration: "none",
+                            fontWeight: "bold",
+                            padding: "4px 8px",
+                            borderRadius: "4px",
+                            display: "inline-block",
+                            marginTop: "8px",
+                          }}
+                        >
+                          Financials
+                        </a>
+                      </div>
+                      <div>Signal date: {date}</div>
+                      <div>Mark signals: {data.score.split(" ")[0]}</div>
+                      <div>My signals: {data.score.split(" ")[1]}</div>
+                      <div>Currency: {data.currency}</div>
+                      <div>Summary: {data.summary}</div>
+                    </div>
                   ) : (
                     <p key={ticker}>No chart data found for ticker: {ticker}</p>
                   );
