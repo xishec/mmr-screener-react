@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./App.css";
 
 const ExchangeMap = {
   NYQ: "NYSE",
@@ -9,6 +10,7 @@ function App() {
   const [availableFiles, setAvailableFiles] = useState({});
   const [screenResults, setScreenResults] = useState({});
   const [loading, setLoading] = useState(true);
+
 
   // Load available JSON file names from the last 30 days.
   const loadJsonFiles = async () => {
@@ -74,114 +76,74 @@ function App() {
   }, [availableFiles]);
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr",
-        justifyContent: "center",
-        alignItems: "flex-start",
-        minHeight: "100vh",
-        width: "95%",
-        gap: "1rem",
-        padding: "1rem",
-      }}
-    >
-      <div style={{}}>
-        <h1>Screen Results Charts</h1>
-        <button
-          onClick={handleReload}
-          style={{
-            padding: "8px 16px",
-            color: "black",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "14px",
-          }}
-        >
-          Reload
+    <div className="app-container">
+      <div className="header">
+        <h1>mmr-screener</h1>
+        <button onClick={handleReload} className="reload-button">
+          Reload Data
         </button>
       </div>
 
-      {loading && <p>Loading json data...</p>}
+      {loading && (
+        <div className="loading">
+          <p>Loading market data...</p>
+        </div>
+      )}
 
       {!loading &&
         Object.entries(screenResults)
           .sort((a, b) => new Date(b[0]) - new Date(a[0]))
           .map(([date, screenResult]) => {
             return (
-              <div key={date}>
-                <h2>signals on {date}</h2>
+              <div key={date} className="date-section">
+                <h2 className="date-title">Signals on {date}</h2>
                 {Object.entries(screenResult).map(([ticker, data]) => {
                   return data ? (
-                    <div
-                      style={{
-                        marginBottom: "40px",
-                        display: "grid",
-                        gridTemplateColumns: "auto",
-                        gap: "10px",
-                      }}
-                      key={ticker}
-                    >
-                      <div>
+                    <div className="stock-card" key={ticker}>
+                      <div className="stock-links">
                         <a
                           href={`https://www.tradingview.com/symbols/${
                             ExchangeMap[data.exchange]
                           }:${ticker}/?timeframe=6M`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            color: data.gain >= 0 ? "#1976d2" : "#d32f2f",
-                            textDecoration: "none",
-                            fontWeight: "bold",
-                            padding: "4px 8px",
-                            border: `1px solid ${
-                              data.gain >= 0 ? "#1976d2" : "#d32f2f"
-                            }`,
-                            borderRadius: "4px",
-                            display: "inline-block",
-                            marginTop: "8px",
-                          }}
+                          className={`stock-link ${
+                            data.gain >= 0 ? "gain-positive" : "gain-negative"
+                          }`}
                         >
-                          {`${ticker} ${data.gain >= 0 ? "+" : ""}
-                          ${(data.gain * 100).toFixed(2)}% in 
-                          ${Math.floor(
-                            (new Date() - new Date(date)) /
-                              (1000 * 60 * 60 * 24)
-                          )}
-                          days`}
+                          {`${ticker} ${data.gain >= 0 ? "+" : ""}${(
+                            data.gain * 100
+                          ).toFixed(2)}% in ${Math.floor(
+                            (new Date() - new Date(date)) / (1000 * 60 * 60 * 24)
+                          )} days`}
                         </a>
-                      </div>
-
-                      <div>
                         <a
                           href={`https://www.tradingview.com/symbols/${
                             ExchangeMap[data.exchange]
                           }:${ticker}/financials-overview/`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            color: `#444`,
-                            border: `1px solid #444`,
-                            textDecoration: "none",
-                            fontWeight: "bold",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            display: "inline-block",
-                            marginTop: "8px",
-                          }}
+                          className="stock-link financials-link"
                         >
                           Financials
                         </a>
                       </div>
-                      <div>Signal date: {date}</div>
-                      <div>Mark signals: {data.score.split(" ")[0]}</div>
-                      <div>My signals: {data.score.split(" ")[1]}</div>
-                      <div>Currency: {data.currency}</div>
-                      <div>Summary: {data.summary}</div>
+
+                      <div className="stock-info">
+                        <div className="info-item">
+                          <span className="info-label">Mark Signals:</span>{" "}
+                          {data.score.split(" ")[0]}
+                        </div>
+                        <div className="info-item">
+                          <span className="info-label">My Signals:</span>{" "}
+                          {data.score.split(" ")[1]}
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <p key={ticker}>No chart data found for ticker: {ticker}</p>
+                    <div key={ticker} className="stock-card">
+                      <p>No chart data found for ticker: {ticker}</p>
+                    </div>
                   );
                 })}
               </div>
