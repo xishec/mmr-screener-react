@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
+import { TextField, InputAdornment } from "@mui/material";
 
 const ExchangeMap = {
   NYQ: "NYSE",
@@ -10,6 +11,7 @@ function App() {
   const [availableFiles, setAvailableFiles] = useState({});
   const [screenResults, setScreenResults] = useState({});
   const [loading, setLoading] = useState(true);
+  const [stopLoss, setStopLoss] = useState(-1);
 
   // Load available JSON file names from the last 30 days.
   const loadJsonFiles = async () => {
@@ -72,9 +74,37 @@ function App() {
     <div className="app-container">
       <div className="header">
         <h1>mmr-screener</h1>
-        {/* <button onClick={handleReload} className="reload-button">
-          Reload Data
-        </button> */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr min-content",
+            gap: "1rem",
+            justifyItems: "end",
+            alignItems: "center",
+          }}
+        >
+          <span>Stop Loss :</span>
+          <TextField
+            type="number"
+            size="small"
+            variant="outlined"
+            slotProps={{
+              input: {
+                min: -25,
+                max: 0,
+                step: 0.5,
+                endAdornment: <InputAdornment position="end">%</InputAdornment>
+              }
+            }}
+            value={stopLoss}
+            onChange={(e) => setStopLoss(Number(e.target.value))}
+            sx={{ width: "100px" }}
+          />
+          <span>Win Rate :</span>
+          <span>{stopLoss.toFixed(1)}%</span>
+          <span>Average Profit :</span>
+          <span>{stopLoss.toFixed(1)}%</span>
+        </div>
       </div>
 
       {loading && (
@@ -100,7 +130,7 @@ function App() {
                     const opacity = Math.abs(data.gain) / 0.15;
                     const toPercentage = (value) =>
                       `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
-                    const isFiltered = data.low_since_signal < -0.02;
+                    const isFiltered = data.low_since_signal < stopLoss / 100;
 
                     return data ? (
                       <div
