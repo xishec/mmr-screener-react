@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { TextField, InputAdornment, Slider, Box } from "@mui/material";
+import { TextField, InputAdornment } from "@mui/material";
 
 const ExchangeMap = {
   NYQ: "NYSE",
@@ -169,7 +169,7 @@ function App() {
                 </h2>
                 <div className="cards">
                   {Object.entries(screenResult).map(([ticker, data]) => {
-                    const gain = data.gain >= 0;
+                    const isWin = data.gain >= 0;
                     const opacity = Math.abs(data.gain) / 0.15;
                     const toPercentage = (value) =>
                       `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
@@ -187,7 +187,7 @@ function App() {
                             "75px 1fr min-content min-content",
                           justifyContent: "center",
                           alignItems: "center",
-                          backgroundColor: gain
+                          backgroundColor: isWin
                             ? `rgba(164, 227, 143, ${opacity})`
                             : `rgba(250, 112, 112, ${opacity})`,
                           color: "#444",
@@ -196,7 +196,9 @@ function App() {
                       >
                         <span style={{ justifySelf: "center" }}>{ticker}</span>
                         <span>{`${toPercentage(data.gain)} ${
-                          gain
+                          data.high_since_signal === -1
+                            ? ""
+                            : isWin
                             ? toPercentage(data.low_since_signal)
                             : toPercentage(data.high_since_signal)
                         }`}</span>
@@ -208,7 +210,7 @@ function App() {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          {gain ? "📈" : "📉"}
+                          {isWin ? "📈" : "📉"}
                         </a>
                         <a
                           href={`https://www.tradingview.com/symbols/${
