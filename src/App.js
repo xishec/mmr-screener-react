@@ -180,84 +180,84 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="header">
-        <h1>mmr-screener</h1>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr min-content",
-            gap: "1rem",
-            justifyItems: "end",
-            alignItems: "center",
-          }}
-        >
-          <span>Enter if 2nd day is :</span>
-          <TextField
-            type="number"
-            size="small"
-            variant="outlined"
-            slotProps={{
-              input: {
-                min: -25,
-                max: 0,
-                endAdornment: <InputAdornment position="end">%</InputAdornment>,
-              },
-            }}
-            value={enterPercentage}
-            onChange={(e) => setEnterPercentage(Number(e.target.value))}
-            sx={{ width: "100px" }}
-          />
-          <span>Stop Loss :</span>
-          <TextField
-            type="number"
-            size="small"
-            variant="outlined"
-            slotProps={{
-              input: {
-                min: -25,
-                max: 0,
-                endAdornment: <InputAdornment position="end">%</InputAdornment>,
-              },
-            }}
-            value={stopLoss}
-            onChange={(e) => setStopLoss(Number(e.target.value))}
-            sx={{ width: "100px" }}
-          />
+      <header className="header">
+        <h1>MMR Screener</h1>
+        
+        <div className="controls-section">
+          <div className="control-group">
+            <span className="control-label">Enter if 2nd day is:</span>
+            <TextField
+              type="number"
+              size="small"
+              variant="outlined"
+              slotProps={{
+                input: {
+                  min: -25,
+                  max: 25,
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                },
+              }}
+              value={enterPercentage}
+              onChange={(e) => setEnterPercentage(Number(e.target.value))}
+              sx={{ width: "100px" }}
+            />
+          </div>
+          
+          <div className="control-group">
+            <span className="control-label">Stop Loss:</span>
+            <TextField
+              type="number"
+              size="small"
+              variant="outlined"
+              slotProps={{
+                input: {
+                  min: -25,
+                  max: 0,
+                  endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                },
+              }}
+              value={stopLoss}
+              onChange={(e) => setStopLoss(Number(e.target.value))}
+              sx={{ width: "100px" }}
+            />
+          </div>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr min-content",
-            gap: "1rem",
-            justifyItems: "end",
-            alignItems: "center",
-          }}
-        >
-          <span style={{ margin: "0 0 0.5rem 0" }}>Win Rate :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>
-            {((totalWin / totalTradeCount) * 100).toFixed(1)}%
-          </span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>Average Profit :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>
-            {((totalProfit / totalTradeCount) * 100).toFixed(1)}%
-          </span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>Trades :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>{totalTradeCount}</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>Average Duration :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>
-            {(totalDuration / totalTradeCount).toFixed(1)}
-          </span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>Annualized :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>
-            {(
-              (((totalProfit / totalTradeCount) * 100).toFixed(1) /
-                (totalDuration / totalTradeCount).toFixed(1)) *
-              250
-            ).toFixed(1)}
-            %
-          </span>
+
+        <div className="stats-grid">
+          <div className="stat-item">
+            <span className="stat-label">Win Rate</span>
+            <span className="stat-value">
+              {((totalWin / totalTradeCount) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Average Profit</span>
+            <span className="stat-value">
+              {((totalProfit / totalTradeCount) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Total Trades</span>
+            <span className="stat-value">{totalTradeCount}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Avg Duration</span>
+            <span className="stat-value">
+              {(totalDuration / totalTradeCount).toFixed(1)} days
+            </span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-label">Annualized</span>
+            <span className="stat-value">
+              {(
+                (((totalProfit / totalTradeCount) * 100).toFixed(1) /
+                  (totalDuration / totalTradeCount).toFixed(1)) *
+                250
+              ).toFixed(1)}%
+            </span>
+          </div>
         </div>
-      </div>
+      </header>
 
       {loading && (
         <div className="loading">
@@ -286,25 +286,16 @@ function App() {
 
                     return data ? (
                       <div
+                        className={`stock-card ${isWin ? 'win' : 'loss'}`}
                         style={{
-                          border: "1px solid #444",
-                          padding: "0.25rem",
-                          margin: "0.25rem",
-                          borderRadius: "8px",
-                          display: "grid",
-                          gridTemplateColumns:
-                            "75px 1fr min-content min-content",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          backgroundColor: isWin
-                            ? `rgba(164, 227, 143, ${opacity})`
-                            : `rgba(250, 112, 112, ${opacity})`,
-                          color: "#444",
                           opacity: isFiltered ? 0.1 : 1,
+                          background: isWin
+                            ? `linear-gradient(135deg, rgba(72, 187, 120, ${Math.min(opacity, 0.4)}) 0%, rgba(56, 178, 172, ${Math.min(opacity, 0.4)}) 100%)`
+                            : `linear-gradient(135deg, rgba(245, 101, 101, ${Math.min(opacity, 0.4)}) 0%, rgba(237, 137, 54, ${Math.min(opacity, 0.4)}) 100%)`,
                         }}
                       >
-                        <span style={{ justifySelf: "center" }}>{ticker}</span>
-                        <span>{`${toPercentage(profit)} ${reason}`}</span>
+                        <span className="ticker">{ticker}</span>
+                        <span className="profit-info">{`${toPercentage(profit)} ${reason}`}</span>
 
                         <a
                           href={`https://www.tradingview.com/symbols/${
@@ -312,6 +303,7 @@ function App() {
                           }:${ticker}/?timeframe=6M`}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title="View Chart"
                         >
                           {isWin ? "📈" : "📉"}
                         </a>
@@ -321,6 +313,7 @@ function App() {
                           }:${ticker}/financials-overview/`}
                           target="_blank"
                           rel="noopener noreferrer"
+                          title="View Financials"
                         >
                           🔍
                         </a>
