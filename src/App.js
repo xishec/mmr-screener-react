@@ -11,16 +11,20 @@ function App() {
   const [availableFiles, setAvailableFiles] = useState({});
   const [screenResults, setScreenResults] = useState({});
   const [loading, setLoading] = useState(true);
-  const [stopLoss, setStopLoss] = useState(-1);
-  const [winRate, setWinRate] = useState(0);
-  const [averageProfit, setAverageProfit] = useState(0);
-  const [averageDuration, setAverageDuration] = useState(0);
+  const [enterPercentage, setEnterPercentage] = useState(2.5);
+  const [stopLoss, setStopLoss] = useState(-2.5);
+  const [trailingStop, setTrailingStop] = useState(-5);
+  const [takeProfit, setTakeProfit] = useState(100);
+  const [totalWin, setTotalWin] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
+  const [totalTradeCount, setTotalTradeCount] = useState(0);
+  const [dataMap, setDataMap] = useState({});
 
   // Load available JSON file names from the last 30 days.
   const loadJsonFiles = async () => {
     const newAvailableFile = {};
     const today = new Date();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 150; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
       const yyyy = date.getFullYear();
@@ -72,6 +76,9 @@ function App() {
     loadJsonData();
   }, [availableFiles]);
 
+  const toPercentage = (value) =>
+    `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
+
   useEffect(() => {
     if (Object.keys(screenResults).length === 0) return;
 
@@ -80,33 +87,85 @@ function App() {
     let totalProfit = 0;
     let totalDuration = 0;
 
+    const newDataMap = {};
+
     Object.entries(screenResults)
       .sort((a, b) => new Date(b[0]) - new Date(a[0]))
       .forEach(([date, screenResult]) => {
+        newDataMap[date] = {};
         Object.entries(screenResult).forEach(([ticker, data]) => {
-          const isFiltered = data.low_since_signal < stopLoss / 100;
-          const isWin = data.gain >= 0;
-          if (!isFiltered) {
-            totalSignal += 1;
-            if (isWin) {
-              winningSignal += 1;
+          const tickerData = {};
+
+          const filtered_candles = data.filtered_candles;
+          let profit = 0;
+          let signalPrice = -1;
+          let isFiltered = false;
+          let buyPrice = -1;
+          let highest = -1;
+          let reason = "";
+
+          const candles = filtered_candles.sort(
+            (a, b) => a.datetime - b.datetime
+          );
+
+          let holdingDuration = 0;
+          for (let i = 0; i < candles.length; i++) {
+            const close = candles[i].close;
+
+            if (i === 0) {
+              signalPrice = close;
+              continue;
             }
-            totalProfit += data.gain * 100;
-            totalDuration +=
-              (new Date() - new Date(date)) / (1000 * 60 * 60 * 24);
+
+            if (i === 1) {
+              buyPrice = close;
+              isFiltered = buyPrice < signalPrice * (1 + enterPercentage / 100);
+              if (!isFiltered) setTotalTradeCount((prev) => prev + 1);
+              continue;
+            }
+
+            holdingDuration++;
+            highest = Math.max(highest, close);
+
+            if (close < buyPrice * (1 + stopLoss / 100)) {
+              profit = (close - buyPrice) / buyPrice;
+              reason = `stop loss ${stopLoss}% after ${holdingDuration} days`;
+              setTotalProfit((prev) => prev + profit);
+              break;
+            } else if (close > buyPrice * (1 + takeProfit / 100)) {
+              if (close < highest * (1 - trailingStop / 100)) {
+                profit = (close - buyPrice) / buyPrice;
+                reason = `trailing stop ${trailingStop}% after ${holdingDuration} days`;
+                setTotalProfit((prev) => prev + profit);
+                break;
+              }
+              break;
+            } else if (i === candles.length - 1) {
+              profit = (close - buyPrice) / buyPrice;
+              reason = `holding`;
+              setTotalProfit((prev) => prev + profit);
+              break;
+            }
           }
+
+          const isWin = profit >= 0;
+          if (isWin) setTotalWin((prev) => prev + 1);
+
+          const opacity = Math.abs(profit) / 0.15;
+          // console.log(exitDate, date, holdingDuration);
+
+          newDataMap[date][ticker] = {
+            profit,
+            reason,
+            opacity,
+            isWin,
+            isFiltered,
+          };
         });
       });
 
-    console.log("Total signals:", totalSignal);
-    console.log("Winning signals:", winningSignal);
-    console.log("Total profit:", totalProfit);
-    console.log(" totalDuration:", totalDuration / totalSignal);
-
-    setWinRate(totalSignal > 0 ? (winningSignal / totalSignal) * 100 : 0);
-    setAverageProfit(totalSignal > 0 ? totalProfit / totalSignal : 0);
-    setAverageDuration(totalSignal > 0 ? totalDuration / totalSignal : 0);
-  }, [screenResults, stopLoss]);
+    setDataMap(newDataMap);
+  }, [enterPercentage, screenResults, stopLoss, takeProfit, trailingStop]);
 
   return (
     <div className="app-container">
@@ -121,6 +180,22 @@ function App() {
             alignItems: "center",
           }}
         >
+          <span>Enter at :</span>
+          <TextField
+            type="number"
+            size="small"
+            variant="outlined"
+            slotProps={{
+              input: {
+                min: -25,
+                max: 0,
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+              },
+            }}
+            value={stopLoss}
+            onChange={(e) => setEnterPercentage(Number(e.target.value))}
+            sx={{ width: "100px" }}
+          />
           <span>Stop Loss :</span>
           <TextField
             type="number"
@@ -137,15 +212,23 @@ function App() {
             onChange={(e) => setStopLoss(Number(e.target.value))}
             sx={{ width: "100px" }}
           />
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr min-content",
+            gap: "1rem",
+            justifyItems: "end",
+            alignItems: "center",
+          }}
+        >
           <span style={{ margin: "0 0 0.5rem 0" }}>Win Rate :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>{winRate.toFixed(1)}%</span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>
+            {((totalWin / totalTradeCount) * 100).toFixed(1)}%
+          </span>
           <span style={{ margin: "0 0 0.5rem 0" }}>Average Profit :</span>
           <span style={{ margin: "0 0 0.5rem 0" }}>
-            {averageProfit.toFixed(1)}%
-          </span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>Average Duration :</span>
-          <span style={{ margin: "0 0 0.5rem 0" }}>
-            {averageDuration.toFixed(1)} days
+            {(totalProfit / totalTradeCount).toFixed(1)}%
           </span>
         </div>
       </div>
@@ -157,23 +240,23 @@ function App() {
       )}
 
       {!loading &&
+        Object.keys(dataMap).length > 0 &&
         Object.entries(screenResults)
           .sort((a, b) => new Date(b[0]) - new Date(a[0]))
           .map(([date, screenResult]) => {
+            const nbDaysSinceSignal = Math.floor(
+              (new Date(Object.keys(availableFiles)[0]) - new Date(date)) /
+                (1000 * 60 * 60 * 24)
+            );
             return (
               <div key={date} className="date-section">
                 <h2 className="date-title">
-                  {`Signals ${Math.floor(
-                    (new Date() - new Date(date)) / (1000 * 60 * 60 * 24)
-                  )} days ago, on ${date}`}
+                  {`Signals ${nbDaysSinceSignal} days ago, on ${date}`}
                 </h2>
                 <div className="cards">
                   {Object.entries(screenResult).map(([ticker, data]) => {
-                    const isWin = data.gain >= 0;
-                    const opacity = Math.abs(data.gain) / 0.15;
-                    const toPercentage = (value) =>
-                      `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
-                    const isFiltered = data.low_since_signal < stopLoss / 100;
+                    const { profit, reason, opacity, isWin, isFiltered } =
+                      dataMap[date][ticker];
 
                     return data ? (
                       <div
@@ -195,13 +278,7 @@ function App() {
                         }}
                       >
                         <span style={{ justifySelf: "center" }}>{ticker}</span>
-                        <span>{`${toPercentage(data.gain)} ${
-                          data.high_since_signal === -1
-                            ? ""
-                            : isWin
-                            ? toPercentage(data.low_since_signal)
-                            : toPercentage(data.high_since_signal)
-                        }`}</span>
+                        <span>{`${toPercentage(profit)} ${reason}`}</span>
 
                         <a
                           href={`https://www.tradingview.com/symbols/${
