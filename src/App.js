@@ -31,18 +31,12 @@ function App() {
         ) {
           throw new Error(`File ${filename} not found`);
         }
-        newAvailableFile[date.toISOString().split("T")[0]] = filename;
+        newAvailableFile[`${yyyy}-${mm}-${dd}`] = filename;
       } catch (error) {
         // Ignore missing files.
       }
     }
     setAvailableFiles(newAvailableFile);
-  };
-
-  const handleReload = () => {
-    setLoading(true);
-    setScreenResults({});
-    loadJsonFiles();
   };
 
   useEffect(() => {
@@ -100,7 +94,6 @@ function App() {
                   {Object.entries(screenResult).map(([ticker, data]) => {
                     const gain = data.gain >= 0;
                     const opacity = Math.abs(data.gain) / 0.2;
-                    console.log(opacity);
 
                     return data ? (
                       <div
