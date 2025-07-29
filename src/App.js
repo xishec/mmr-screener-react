@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { TextField, InputAdornment } from "@mui/material";
+import { TextField, InputAdornment, Slider, Box } from "@mui/material";
 
 const ExchangeMap = {
   NYQ: "NYSE",
@@ -12,6 +12,9 @@ function App() {
   const [screenResults, setScreenResults] = useState({});
   const [loading, setLoading] = useState(true);
   const [stopLoss, setStopLoss] = useState(-1);
+  const [winRate, setWinRate] = useState(0);
+  const [averageProfit, setAverageProfit] = useState(0);
+  const [averageDuration, setAverageDuration] = useState(0);
 
   // Load available JSON file names from the last 30 days.
   const loadJsonFiles = async () => {
@@ -62,13 +65,48 @@ function App() {
           }
         })
       );
-      console.log("Loaded screen results:", newScreenResults);
       if (Object.keys(newScreenResults).length > 0) setLoading(false);
       setScreenResults(newScreenResults);
     };
 
     loadJsonData();
   }, [availableFiles]);
+
+  useEffect(() => {
+    if (Object.keys(screenResults).length === 0) return;
+
+    let totalSignal = 0;
+    let winningSignal = 0;
+    let totalProfit = 0;
+    let totalDuration = 0;
+
+    Object.entries(screenResults)
+      .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+      .forEach(([date, screenResult]) => {
+        Object.entries(screenResult).forEach(([ticker, data]) => {
+          const isFiltered = data.low_since_signal < stopLoss / 100;
+          const isWin = data.gain >= 0;
+          if (!isFiltered) {
+            totalSignal += 1;
+            if (isWin) {
+              winningSignal += 1;
+            }
+            totalProfit += data.gain * 100;
+            totalDuration +=
+              (new Date() - new Date(date)) / (1000 * 60 * 60 * 24);
+          }
+        });
+      });
+
+    console.log("Total signals:", totalSignal);
+    console.log("Winning signals:", winningSignal);
+    console.log("Total profit:", totalProfit);
+    console.log(" totalDuration:", totalDuration / totalSignal);
+
+    setWinRate(totalSignal > 0 ? (winningSignal / totalSignal) * 100 : 0);
+    setAverageProfit(totalSignal > 0 ? totalProfit / totalSignal : 0);
+    setAverageDuration(totalSignal > 0 ? totalDuration / totalSignal : 0);
+  }, [screenResults, stopLoss]);
 
   return (
     <div className="app-container">
@@ -92,18 +130,23 @@ function App() {
               input: {
                 min: -25,
                 max: 0,
-                step: 0.5,
-                endAdornment: <InputAdornment position="end">%</InputAdornment>
-              }
+                endAdornment: <InputAdornment position="end">%</InputAdornment>,
+              },
             }}
             value={stopLoss}
             onChange={(e) => setStopLoss(Number(e.target.value))}
             sx={{ width: "100px" }}
           />
-          <span>Win Rate :</span>
-          <span>{stopLoss.toFixed(1)}%</span>
-          <span>Average Profit :</span>
-          <span>{stopLoss.toFixed(1)}%</span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>Win Rate :</span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>{winRate.toFixed(1)}%</span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>Average Profit :</span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>
+            {averageProfit.toFixed(1)}%
+          </span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>Average Duration :</span>
+          <span style={{ margin: "0 0 0.5rem 0" }}>
+            {averageDuration.toFixed(1)} days
+          </span>
         </div>
       </div>
 
