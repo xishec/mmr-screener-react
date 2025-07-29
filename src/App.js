@@ -11,7 +11,6 @@ function App() {
   const [screenResults, setScreenResults] = useState({});
   const [loading, setLoading] = useState(true);
 
-
   // Load available JSON file names from the last 30 days.
   const loadJsonFiles = async () => {
     const newAvailableFile = {};
@@ -79,9 +78,9 @@ function App() {
     <div className="app-container">
       <div className="header">
         <h1>mmr-screener</h1>
-        <button onClick={handleReload} className="reload-button">
+        {/* <button onClick={handleReload} className="reload-button">
           Reload Data
-        </button>
+        </button> */}
       </div>
 
       {loading && (
@@ -97,25 +96,45 @@ function App() {
             return (
               <div key={date} className="date-section">
                 <h2 className="date-title">Signals on {date}</h2>
-                {Object.entries(screenResult).map(([ticker, data]) => {
-                  return data ? (
-                    <div className="stock-card" key={ticker}>
-                      <div className="stock-links">
+                <div className="cards">
+                  {Object.entries(screenResult).map(([ticker, data]) => {
+                    const gain = data.gain >= 0;
+                    const opacity = Math.abs(data.gain) / 0.2;
+                    console.log(opacity);
+
+                    return data ? (
+                      <div
+                        style={{
+                          border: "1px solid #444",
+                          padding: "0.25rem",
+                          margin: "0.25rem",
+                          borderRadius: "8px",
+                          display: "grid",
+                          gridTemplateColumns:
+                            "75px 1fr min-content min-content",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          backgroundColor: gain
+                            ? `rgba(164, 227, 143, ${opacity})`
+                            : `rgba(250, 112, 112, ${opacity})`,
+                          color: "#444",
+                        }}
+                      >
+                        <span style={{ justifySelf: "center" }}>{ticker}</span>
+                        <span>{`${gain ? "+" : ""}${(data.gain * 100).toFixed(
+                          2
+                        )}% in ${Math.floor(
+                          (new Date() - new Date(date)) / (1000 * 60 * 60 * 24)
+                        )} days`}</span>
+
                         <a
                           href={`https://www.tradingview.com/symbols/${
                             ExchangeMap[data.exchange]
                           }:${ticker}/?timeframe=6M`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`stock-link ${
-                            data.gain >= 0 ? "gain-positive" : "gain-negative"
-                          }`}
                         >
-                          {`${ticker} ${data.gain >= 0 ? "+" : ""}${(
-                            data.gain * 100
-                          ).toFixed(2)}% in ${Math.floor(
-                            (new Date() - new Date(date)) / (1000 * 60 * 60 * 24)
-                          )} days`}
+                          {gain ? "📈" : "📉"}
                         </a>
                         <a
                           href={`https://www.tradingview.com/symbols/${
@@ -123,29 +142,17 @@ function App() {
                           }:${ticker}/financials-overview/`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="stock-link financials-link"
                         >
-                          Financials
+                          🔍
                         </a>
                       </div>
-
-                      <div className="stock-info">
-                        <div className="info-item">
-                          <span className="info-label">Mark Signals:</span>{" "}
-                          {data.score.split(" ")[0]}
-                        </div>
-                        <div className="info-item">
-                          <span className="info-label">My Signals:</span>{" "}
-                          {data.score.split(" ")[1]}
-                        </div>
+                    ) : (
+                      <div key={ticker} className="stock-card">
+                        <p>No chart data found for ticker: {ticker}</p>
                       </div>
-                    </div>
-                  ) : (
-                    <div key={ticker} className="stock-card">
-                      <p>No chart data found for ticker: {ticker}</p>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             );
           })}

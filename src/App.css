@@ -19,7 +19,7 @@ body {
 
 .header {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 2rem;
   margin-bottom: 2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -53,16 +53,17 @@ body {
   font-size: 1.2rem;
   color: #6c757d;
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .date-section {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 2rem;
   margin-bottom: 2rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: grid;
 }
 
 .date-title {
@@ -73,13 +74,29 @@ body {
   padding-bottom: 0.5rem;
 }
 
-.stock-card {
-  position: relative;
-  overflow: hidden;
+.cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  margin-bottom: 1rem;
-  column-gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.5rem;
+}
+
+.stock-card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+a {
+  text-decoration: none;
+  cursor: pointer;
+  margin: 0.5rem;
+  font-size: 1.5rem;
+}
+
+a:hover {
+  scale: 1.2;
+  transition: scale 0.2s ease-out;
 }
 
 .stock-links {
@@ -93,11 +110,21 @@ body {
   font-weight: 600;
   padding: 12px 20px;
   border-radius: 8px;
-  display: inline-block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.95rem;
   border: 2px solid;
   position: relative;
   overflow: hidden;
+}
+
+.stock-ticker {
+  flex-grow: 1;
+}
+
+.stock-gain-days {
+  text-align: right;
 }
 
 .gain-positive {
@@ -115,14 +142,13 @@ body {
 .financials-link {
   color: #2c3e50;
   border-color: #dee2e6;
-  background: #f8f9fa;
   display: grid;
   justify-content: center;
 }
 
 .stock-info {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   justify-items: center;
   align-content: center;
   gap: 1rem;
@@ -205,7 +231,7 @@ body {
     padding-bottom: 1rem;
   }
 }
-
+/* 
 @media (max-width: 768px) {
   .app-container {
     padding: 1rem;
@@ -221,11 +247,18 @@ body {
     font-size: 2rem;
   }
 
+  .stock-card {
+    grid-template-columns: 1fr;
+    row-gap: 1rem;
+  }
+
   .stock-links {
+    display: flex;
     flex-direction: column;
+    gap: 0.5rem;
   }
 
   .stock-info {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
   }
-}
+} */
