@@ -89,11 +89,18 @@ function App() {
           .map(([date, screenResult]) => {
             return (
               <div key={date} className="date-section">
-                <h2 className="date-title">Signals on {date}</h2>
+                <h2 className="date-title">
+                  {`Signals ${Math.floor(
+                    (new Date() - new Date(date)) / (1000 * 60 * 60 * 24)
+                  )} days ago, on ${date}`}
+                </h2>
                 <div className="cards">
                   {Object.entries(screenResult).map(([ticker, data]) => {
                     const gain = data.gain >= 0;
-                    const opacity = Math.abs(data.gain) / 0.2;
+                    const opacity = Math.abs(data.gain) / 0.15;
+                    const toPercentage = (value) =>
+                      `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
+                    const isFiltered = data.low_since_signal < -0.02;
 
                     return data ? (
                       <div
@@ -111,14 +118,15 @@ function App() {
                             ? `rgba(164, 227, 143, ${opacity})`
                             : `rgba(250, 112, 112, ${opacity})`,
                           color: "#444",
+                          opacity: isFiltered ? 0.1 : 1,
                         }}
                       >
                         <span style={{ justifySelf: "center" }}>{ticker}</span>
-                        <span>{`${gain ? "+" : ""}${(data.gain * 100).toFixed(
-                          2
-                        )}% in ${Math.floor(
-                          (new Date() - new Date(date)) / (1000 * 60 * 60 * 24)
-                        )} days`}</span>
+                        <span>{`${toPercentage(data.gain)} ${
+                          gain
+                            ? toPercentage(data.low_since_signal)
+                            : toPercentage(data.high_since_signal)
+                        }`}</span>
 
                         <a
                           href={`https://www.tradingview.com/symbols/${
